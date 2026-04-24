@@ -313,42 +313,95 @@ function findPath(r1, c1, r2, c2) {
     const rows = gameState.board.length;
     const cols = gameState.board[0].length;
     
-    if (isDirectPath(r1, c1, r2, c2)) {
+    const path0 = checkZeroTurn(r1, c1, r2, c2);
+    if (path0) return path0;
+    
+    const path1 = checkOneTurn(r1, c1, r2, c2);
+    if (path1) return path1;
+    
+    const path2 = checkTwoTurns(r1, c1, r2, c2);
+    if (path2) return path2;
+    
+    return null;
+}
+
+function checkZeroTurn(r1, c1, r2, c2) {
+    if (isLinePathClear(r1, c1, r2, c2)) {
         return [[r1, c1], [r2, c2]];
+    }
+    if (isDiagonalPathClear(r1, c1, r2, c2)) {
+        return [[r1, c1], [r2, c2]];
+    }
+    return null;
+}
+
+function checkOneTurn(r1, c1, r2, c2) {
+    const rows = gameState.board.length;
+    const cols = gameState.board[0].length;
+    
+    if (isCellEmpty(r1, c2)) {
+        if (isLinePathClear(r1, c1, r1, c2) && isLinePathClear(r1, c2, r2, c2)) {
+            return [[r1, c1], [r1, c2], [r2, c2]];
+        }
+    }
+    
+    if (isCellEmpty(r2, c1)) {
+        if (isLinePathClear(r1, c1, r2, c1) && isLinePathClear(r2, c1, r2, c2)) {
+            return [[r1, c1], [r2, c1], [r2, c2]];
+        }
     }
     
     for (let c = -1; c <= cols; c++) {
         if (c === c1 || c === c2) continue;
-        const canGoToC1 = isPathClear(r1, c1, r1, c);
-        const canGoToC2 = isPathClear(r1, c, r2, c);
-        const canGoFromC = isPathClear(r2, c, r2, c2);
-        
-        if (canGoToC1 && canGoToC2 && canGoFromC) {
+        if (isLinePathClear(r1, c1, r1, c) && 
+            isLinePathClear(r1, c, r2, c) && 
+            isLinePathClear(r2, c, r2, c2)) {
             return [[r1, c1], [r1, c], [r2, c], [r2, c2]];
         }
     }
     
     for (let r = -1; r <= rows; r++) {
         if (r === r1 || r === r2) continue;
-        const canGoToR1 = isPathClear(r1, c1, r, c1);
-        const canGoToR2 = isPathClear(r, c1, r, c2);
-        const canGoFromR = isPathClear(r, c2, r2, c2);
-        
-        if (canGoToR1 && canGoToR2 && canGoFromR) {
+        if (isLinePathClear(r1, c1, r, c1) && 
+            isLinePathClear(r, c1, r, c2) && 
+            isLinePathClear(r, c2, r2, c2)) {
             return [[r1, c1], [r, c1], [r, c2], [r2, c2]];
         }
     }
     
+    return null;
+}
+
+function checkTwoTurns(r1, c1, r2, c2) {
+    const rows = gameState.board.length;
+    const cols = gameState.board[0].length;
+    
     for (let c = -1; c <= cols; c++) {
-        if (c === c1 || c === c2) continue;
+        if (c === c1) continue;
+        if (!isLinePathClear(r1, c1, r1, c)) continue;
+        
         for (let r = -1; r <= rows; r++) {
             if (r === r1 || r === r2) continue;
             
-            const path1 = isPathClear(r1, c1, r1, c) && isPathClear(r1, c, r, c);
-            const path2 = isPathClear(r, c, r, c2) && isPathClear(r, c2, r2, c2);
-            
-            if (path1 && path2) {
+            if (isLinePathClear(r1, c, r, c) && 
+                isLinePathClear(r, c, r, c2) && 
+                isLinePathClear(r, c2, r2, c2)) {
                 return [[r1, c1], [r1, c], [r, c], [r, c2], [r2, c2]];
+            }
+        }
+    }
+    
+    for (let r = -1; r <= rows; r++) {
+        if (r === r1) continue;
+        if (!isLinePathClear(r1, c1, r, c1)) continue;
+        
+        for (let c = -1; c <= cols; c++) {
+            if (c === c1 || c === c2) continue;
+            
+            if (isLinePathClear(r, c1, r, c) && 
+                isLinePathClear(r, c, r2, c) && 
+                isLinePathClear(r2, c, r2, c2)) {
+                return [[r1, c1], [r, c1], [r, c], [r2, c], [r2, c2]];
             }
         }
     }
@@ -356,20 +409,7 @@ function findPath(r1, c1, r2, c2) {
     return null;
 }
 
-function isDirectPath(r1, c1, r2, c2) {
-    if (r1 === r2) {
-        return isPathClear(r1, c1, r2, c2);
-    }
-    if (c1 === c2) {
-        return isPathClear(r1, c1, r2, c2);
-    }
-    if (Math.abs(r1 - r2) === Math.abs(c1 - c2)) {
-        return isPathClearDiagonal(r1, c1, r2, c2);
-    }
-    return false;
-}
-
-function isPathClear(r1, c1, r2, c2) {
+function isLinePathClear(r1, c1, r2, c2) {
     const rows = gameState.board.length;
     const cols = gameState.board[0].length;
     
@@ -377,8 +417,7 @@ function isPathClear(r1, c1, r2, c2) {
         const minC = Math.min(c1, c2);
         const maxC = Math.max(c1, c2);
         for (let c = minC + 1; c < maxC; c++) {
-            if (c < 0 || c >= cols) continue;
-            if (gameState.board[r1][c] !== 0 && !gameState.eliminated.has(`${r1},${c}`)) {
+            if (!isCellEmpty(r1, c)) {
                 return false;
             }
         }
@@ -389,8 +428,7 @@ function isPathClear(r1, c1, r2, c2) {
         const minR = Math.min(r1, r2);
         const maxR = Math.max(r1, r2);
         for (let r = minR + 1; r < maxR; r++) {
-            if (r < 0 || r >= rows) continue;
-            if (gameState.board[r][c1] !== 0 && !gameState.eliminated.has(`${r},${c1}`)) {
+            if (!isCellEmpty(r, c1)) {
                 return false;
             }
         }
@@ -400,7 +438,11 @@ function isPathClear(r1, c1, r2, c2) {
     return false;
 }
 
-function isPathClearDiagonal(r1, c1, r2, c2) {
+function isDiagonalPathClear(r1, c1, r2, c2) {
+    if (Math.abs(r1 - r2) !== Math.abs(c1 - c2)) {
+        return false;
+    }
+    
     const rows = gameState.board.length;
     const cols = gameState.board[0].length;
     
@@ -411,16 +453,33 @@ function isPathClearDiagonal(r1, c1, r2, c2) {
     let c = c1 + dc;
     
     while (r !== r2 && c !== c2) {
-        if (r >= 0 && r < rows && c >= 0 && c < cols) {
-            if (gameState.board[r][c] !== 0 && !gameState.eliminated.has(`${r},${c}`)) {
-                return false;
-            }
+        if (!isCellEmpty(r, c)) {
+            return false;
         }
         r += dr;
         c += dc;
     }
     
     return true;
+}
+
+function isCellEmpty(r, c) {
+    const rows = gameState.board.length;
+    const cols = gameState.board[0].length;
+    
+    if (r < 0 || r >= rows || c < 0 || c >= cols) {
+        return true;
+    }
+    
+    if (gameState.board[r][c] === 0) {
+        return true;
+    }
+    
+    if (gameState.eliminated.has(`${r},${c}`)) {
+        return true;
+    }
+    
+    return false;
 }
 
 function showConnectionPath(path) {
@@ -831,9 +890,16 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
 
+function showMessage(icon, title, content) {
+    document.getElementById('message-icon').textContent = icon;
+    document.getElementById('message-title').textContent = title;
+    document.getElementById('message-content').textContent = content;
+    document.getElementById('message-modal').classList.remove('hidden');
+}
+
 function useHint() {
     if (playerData.items.hint <= 0) {
-        alert('提示卡不足！可以去商店购买。');
+        showMessage('💡', '提示卡不足', '提示卡不足！可以去商店购买。');
         return;
     }
     
@@ -856,7 +922,7 @@ function useHint() {
         }
     }
     
-    alert('暂时没有可匹配的数字！');
+    showMessage('🤔', '暂无匹配', '暂时没有可匹配的数字！游戏将自动洗牌。');
 }
 
 function highlightHintPair(r1, c1, r2, c2) {
@@ -880,13 +946,13 @@ function highlightHintPair(r1, c1, r2, c2) {
 
 function useTimeBonus() {
     if (playerData.items.time <= 0) {
-        alert('时间卡不足！可以去商店购买。');
+        showMessage('⏰', '时间卡不足', '时间卡不足！可以去商店购买。');
         return;
     }
     
     const config = DIFFICULTY_CONFIG[gameState.difficulty];
     if (config.timeLimit === 0) {
-        alert('当前模式无时间限制，无需使用时间卡！');
+        showMessage('⏰', '无需使用', '当前模式无时间限制，无需使用时间卡！');
         return;
     }
     
@@ -988,7 +1054,7 @@ function buyItem(itemType) {
     const price = prices[itemType];
     
     if (playerData.totalPoints < price) {
-        alert('积分不足！');
+        showMessage('💰', '积分不足', `积分不足！需要 ${price} 积分才能购买。`);
         return;
     }
     
